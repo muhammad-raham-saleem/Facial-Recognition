@@ -6,7 +6,11 @@ import os
 import numpy as np
 from typing import List
 from fastapi import UploadFile, File
+BASE_DIR = os.path.dirname(__file__)          # folder where main.py lives
+DATA_DIR = os.path.join(BASE_DIR, "data")
+EMB_DIR = os.path.join(DATA_DIR, "embeddings")
 
+os.makedirs(EMB_DIR, exist_ok=True)
 
 app = FastAPI()
 face_app = FaceAnalysis(name="buffalo_l")
@@ -49,14 +53,14 @@ async def enroll(user_id: str, images: List[UploadFile] = File(...)):
         raise HTTPException(status_code=400, detail="Not enough usable faces found.")
 
     avg_emb = np.mean(np.stack(embs, axis=0), axis=0).astype(np.float32)
-    out_path = os.path.join("data", "embeddings", f"{user_id}.npy")
+    out_path = os.path.join(EMB_DIR, f"{user_id}.npy")
     np.save(out_path, avg_emb)
 
     return {"enrolled": True, "user_id": user_id, "used_images": len(embs)}
 
 @app.post("/verify")
 async def verify(image: UploadFile = File(...), user_id: str = "rahum", threshold: float = 0.35):
-    path = os.path.join("data", "embeddings", f"{user_id}.npy")
+    path = os.path.join(EMB_DIR, f"{user_id}.npy")
     if not os.path.exists(path):
         raise HTTPException(status_code=400, detail=f"No enrolled user '{user_id}'. Enroll first.")
 
